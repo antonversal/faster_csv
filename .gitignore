@@ -1,0 +1,6 @@
+rebar
+.idea
+out
+ebin
+*.dump
+*.iml

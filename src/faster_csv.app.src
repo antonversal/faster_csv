@@ -1,0 +1,12 @@
+{application, faster_csv,
+ [
+  {description, "Csv file parser"},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { faster_csv_app, [1, 5]}},
+  {env, []}
+ ]}.
