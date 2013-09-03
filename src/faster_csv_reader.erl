@@ -60,18 +60,18 @@ open_file(FileName) ->
 close_file(File) ->
   ok = file:close(File).
 
-read_lines(Id, File) ->
+read_lines(Id, File, LineNumber) ->
   case file:read_line(File) of
     {ok, Data} ->
-        faster_csv_router:line(Id,Data),
-        read_lines(Id, File);
+        faster_csv_router:line(Id, LineNumber + 1, Data),
+        read_lines(Id, File, LineNumber + 1);
     eof        ->
       faster_csv_router:end_of_file(Id)
   end.
 
 read_file(Id, FileName) ->
   File = open_file(FileName),
-  read_lines(Id, File),
+  read_lines(Id, File, 0),
   close_file(File).
 
 name(Id) ->

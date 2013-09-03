@@ -4,7 +4,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, line/2, end_of_file/1]).
+-export([start_link/1, line/3, end_of_file/1]).
 
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -20,9 +20,9 @@ start_link(Id) ->
   Name = name(Id),
   gen_server:start_link({local, Name}, ?MODULE, [Id], []).
 
-line(Id, Line) ->
+line(Id, LineNumber, Line) ->
   Name = name(Id),
-  gen_server:cast(Name, {line, Line}).
+  gen_server:cast(Name, {line, LineNumber, Line}).
 
 end_of_file(Id) ->
   Name = name(Id),
@@ -40,9 +40,9 @@ init([Id]) ->
 handle_call(_Request, _From, State) ->
   {reply, ingnored, State}.
 
-handle_cast({line, Line}, State) ->
+handle_cast({line, LineNumber, Line}, State) ->
   %%io:format("State is: ~w ~n", [State]),
-  Pids = send_to_parser(Line, State#state.parser_pids),
+  Pids = send_to_parser(LineNumber, Line, State#state.parser_pids),
   %%io:format("NewState is: ~w ~n", [NewSate]),
   {noreply, State#state{parser_pids = Pids}};
 
@@ -67,9 +67,9 @@ code_change(_OldVsn, State, _Extra) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-send_to_parser(Line, Parsers) ->
+send_to_parser(LineNumber, Line, Parsers) ->
   Pid = hd(Parsers),
-  faster_csv_parser:parse(Pid, Line),
+  faster_csv_parser:parse(Pid, LineNumber, Line),
   tl(Parsers) ++ [Pid].
 
 send_to_eof_parser([]) ->

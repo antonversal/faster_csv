@@ -4,7 +4,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, parse/2, end_of_file/1]).
+-export([start_link/1, parse/3, end_of_file/1]).
 
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -16,8 +16,8 @@
 start_link(Reciever) ->
   gen_server:start_link(?MODULE, [Reciever], []).
 
-parse(Pid, Line) ->
-  gen_server:cast(Pid, {line, Line}).
+parse(Pid, LineNumber, Line) ->
+  gen_server:cast(Pid, {line, LineNumber, Line}).
 
 end_of_file(Pid) ->
   gen_server:cast(Pid, eof).
@@ -39,10 +39,9 @@ handle_cast(eof, State) ->
   State ! {parser_is_done, self()},
   {noreply, State};
 
-handle_cast({line, Line}, State) ->
+handle_cast({line, LineNumber, Line}, State) ->
   List = parse_line(Line, []),
-  State ! List,
-  %%io:format("Parsed line is: ~w ~n", [List]),
+  State ! {LineNumber, List},
   {noreply, State};
 
 handle_cast(_Request, State) ->
