@@ -4,7 +4,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, read/2]).
+-export([start_link/1, read/2, stop/1]).
 
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -18,6 +18,10 @@
 start_link(Id) ->
   Name = name(Id),
   gen_server:start_link({local, Name}, ?MODULE, Id,[]).
+
+stop(Id) ->
+  gen_server:call(name(Id), stop).
+
 read(Id, FileName) ->
   gen_server:cast(name(Id), {read, FileName}).
 
@@ -54,7 +58,7 @@ terminate(_Reason, _State) ->
 %% Internal functions
 %% ====================================================================
 open_file(FileName) ->
-  {ok, File} = file:open(FileName, [read, raw, read_ahead]),
+  {ok, File} = file:open(FileName, [read, raw, read_ahead, binary]),
   File.
 
 close_file(File) ->
@@ -63,8 +67,9 @@ close_file(File) ->
 read_lines(Id, File, LineNumber) ->
   case file:read_line(File) of
     {ok, Data} ->
-        faster_csv_router:line(Id, LineNumber + 1, Data),
-        read_lines(Id, File, LineNumber + 1);
+      %io:format("Read line. ~w ~n", [Data]),
+      faster_csv_router:line(Id, LineNumber + 1, Data),
+      read_lines(Id, File, LineNumber + 1);
     eof        ->
       faster_csv_router:end_of_file(Id)
   end.

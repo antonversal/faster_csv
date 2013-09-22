@@ -4,3 +4,6 @@ out
 ebin
 *.dump
 *.iml
+logs
+.eunit
+*.beam
