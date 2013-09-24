@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, [Id, ParserWrkCount]) ->
-    faster_csv_sup:start_link(Id, ParserWrkCount).
+    faster_csv_sup:start_link(Id, ParserWrkCount, $,, $").
 
 stop(_State) ->
     ok.

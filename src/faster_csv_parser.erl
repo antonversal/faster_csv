@@ -8,17 +8,18 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, parse/3, end_of_file/1]).
+-export([start_link/3, parse/3, end_of_file/1]).
 
 %% gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
 
+-record(state, {reciever, splitter = $, , delimiter=$"}).
 %% ====================================================================
 %% API
 %% ====================================================================
-start_link(Reciever) ->
-  gen_server:start_link(?MODULE, [Reciever], []).
+start_link(Reciever, Splitter, Delimiter) ->
+  gen_server:start_link(?MODULE, [Reciever, Splitter, Delimiter], []).
 
 parse(Pid, LineNumber, Line) ->
   gen_server:cast(Pid, {line, LineNumber, Line}).
@@ -30,24 +31,22 @@ end_of_file(Pid) ->
 %% gen_server callbacks
 %% ====================================================================
 
-init([Reciever]) ->
+init([Reciever,Splitter, Delimiter]) ->
   io:format("~p (~p) starting...~n", [?MODULE, self()]),
   process_flag(trap_exit, true),
-  {ok, Reciever}.
+  {ok, #state{reciever = Reciever, splitter = Splitter, delimiter = Delimiter}}.
 
 handle_call(_Request, _From, State) ->
   {noreply, State}.
 
 handle_cast(eof, State) ->
   io:format("~p (~p) done.~n", [?MODULE, self()]),
-  State ! {parser_is_done, self()},
+  State#state.reciever ! {parser_is_done, self()},
   {noreply, State};
 
 handle_cast({line, LineNumber, Line}, State) ->
-  %io:format("Parser got: ~w ~n", [{LineNumber, Line}]),
-  List = parse_line(Line),
-  %io:format("Send to process: ~w ~n", [{LineNumber, List}]),
-  %State ! {LineNumber, List},
+  List = parse_line(Line, State#state.splitter, State#state.delimiter),
+  State#state.reciever ! {LineNumber, List},
   {noreply, State};
 
 handle_cast(_Request, State) ->
@@ -67,12 +66,6 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal functions
 %% ====================================================================
 
-parse_line(Line) ->
-  %io:format("Got: ~p ~n", [Line]),
-  %{Encoding, Length} = unicode:bom_to_encoding(Line),
-  %io:format("Encoding: ~p, ~p ~n", [Encoding, Length]),
-  parse_line(Line, $,, none).
-
 parse_line(Line, Spliter, Delimiter) ->
   parse_line(Line, Spliter, Delimiter, [], [], ok).
 
@@ -90,20 +83,22 @@ parse_line(<<"\n">>, _, _, Fields, Acc, ok) ->
 
 parse_line(<<>>, _, _, Fields, Acc, ok) ->
     lists:reverse(join_list(Fields, Acc));
-
+% "
 parse_line(<<Delimiter, Rest/bitstring>>, Spliter, Delimiter, Fields, [], ok) when Delimiter /= none ->
   parse_line(Rest, Spliter, Delimiter, Fields, [], started);
 
+% when ',"",'
+parse_line(<<Spliter, Delimiter, Delimiter, Spliter, Rest/bitstring>>, Spliter, Delimiter, Fields, [], ok) when Delimiter /= none ->
+  parse_line(Rest, Spliter, Delimiter, [nil|Fields], [], started);
+% ,
+parse_line(<<Spliter, Rest/bitstring>>, Spliter, Delimiter, Fields, Acc, ok) ->
+  parse_line(Rest, Spliter, Delimiter, join_list(Fields, Acc), [], ok);
+% ",
 parse_line(<<Delimiter, Spliter, Rest/bitstring>>, Spliter, Delimiter, Fields, Acc, started) when Delimiter /= none ->
   parse_line(Rest, Spliter, Delimiter, join_list(Fields, Acc), [], ok);
 
-parse_line(<<Spliter, Delimiter, Rest/bitstring>>, Spliter, Delimiter, Fields, Acc, ok) when Delimiter /= none ->
-  parse_line(Rest, Spliter, Delimiter, join_list(Fields, Acc), [], started);
 
-parse_line(<<Spliter, Rest/bitstring>>, Spliter, Delimiter, Fields, Acc, ok) ->
-  parse_line(Rest, Spliter, Delimiter, join_list(Fields, Acc), [], ok);
-
-%solves embedded double-delimiter characters
+% "" => " solves embedded double-delimiter characters
 parse_line(<<Delimiter, Delimiter, Rest/bitstring>>, Spliter, Delimiter, Fields, Acc, State) when Delimiter /= none ->
   parse_line(Rest, Spliter, Delimiter, Fields, [Delimiter|Acc], State);
 
@@ -115,38 +110,6 @@ join_list(Fields, []) ->
 
 join_list(Fields, Acc) ->
   [lists:reverse(Acc)| Fields].
-
-% parse_line(Line, Acc) ->
-%   lists:reverse(parse_line(Line, [], Acc)).
-% parse_line([End], Str, Acc) ->
-%   Str0 = case End of
-%            $\n ->
-%              Str;
-%            _ -> % NOTE: The last line of the file
-%              [End|Str]
-%          end,
-%   case Str0 of
-%     [] ->
-%       Acc;
-%     _ ->
-%       [string:strip(lists:reverse(Str0))|Acc]
-%   end;
-% parse_line([$", $,|R], _, Acc) ->
-%   parse_line(R, [], ["\""|Acc]);
-% parse_line([$"|R], Str, Acc) ->
-%   parse_string(R, Str, Acc);
-% parse_line([$,|R], Str, Acc) ->
-%   parse_line(R, [], [string:strip(lists:reverse(Str))|Acc]);
-% parse_line([I|R], Str, Acc) ->
-%   parse_line(R, [I|Str], Acc).
-
-% parse_string([$", $,|R], Str, Acc) ->
-%   parse_line(R, [], [string:strip(lists:reverse(Str))|Acc]);
-% parse_string([$"|R], Str, Acc) ->
-%   parse_line(R, [], [string:strip(lists:reverse(Str))|Acc]);
-% parse_string([I|R], Str, Acc) ->
-%   parse_string(R, [I|Str], Acc).
-
 
 -ifdef(TEST).
 parse_line_test_() ->
