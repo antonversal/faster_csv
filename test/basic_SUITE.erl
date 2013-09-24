@@ -15,13 +15,13 @@ init_per_suite(Config) ->
 	FileName = string:concat(filename:dirname(code:which(?MODULE)), "/fixtures/test.csv"),
 	faster_csv_reader:read(1, FileName),
 	ct:sleep(10),
-	[{reciever, Pid} | Config].
+	[{receiver, Pid} | Config].
 
 end_per_suite(Config) ->
-	?config(reciever, Config) ! stop.
+	?config(receiver, Config) ! stop.
 
 receiving_lines(Config) ->
-	{messages, Messages} = erlang:process_info(?config(reciever, Config), messages),
+	{messages, Messages} = erlang:process_info(?config(receiver, Config), messages),
 	Line1 = {1,["managerID","awardID","yearID","lgID","tie","notes"]},
 	true = lists:member(Line1, Messages),
 	Line2 = {2,["larusto01m","BBWAA Manager of the year","1983","AL", nil, nil]},
@@ -32,7 +32,7 @@ receiving_lines(Config) ->
 	true = lists:member(Line4, Messages).
 
 receiving_parsers_are_done(Config) ->
-	{messages, Messages} = erlang:process_info(?config(reciever, Config), messages),
+	{messages, Messages} = erlang:process_info(?config(receiver, Config), messages),
 	4 = length(lists:filter(fun(Elem) -> 
 														element(1, Elem) == parser_is_done
 													end,Messages)).

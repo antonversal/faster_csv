@@ -14,12 +14,12 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
 
--record(state, {reciever, splitter = $, , delimiter=$"}).
+-record(state, {receiver, splitter = $, , delimiter=$"}).
 %% ====================================================================
 %% API
 %% ====================================================================
-start_link(Reciever, Splitter, Delimiter) ->
-  gen_server:start_link(?MODULE, [Reciever, Splitter, Delimiter], []).
+start_link(Receiver, Splitter, Delimiter) ->
+  gen_server:start_link(?MODULE, [Receiver, Splitter, Delimiter], []).
 
 parse(Pid, LineNumber, Line) ->
   gen_server:cast(Pid, {line, LineNumber, Line}).
@@ -31,22 +31,22 @@ end_of_file(Pid) ->
 %% gen_server callbacks
 %% ====================================================================
 
-init([Reciever,Splitter, Delimiter]) ->
+init([Receiver,Splitter, Delimiter]) ->
   io:format("~p (~p) starting...~n", [?MODULE, self()]),
   process_flag(trap_exit, true),
-  {ok, #state{reciever = Reciever, splitter = Splitter, delimiter = Delimiter}}.
+  {ok, #state{receiver = Receiver, splitter = Splitter, delimiter = Delimiter}}.
 
 handle_call(_Request, _From, State) ->
   {noreply, State}.
 
 handle_cast(eof, State) ->
   io:format("~p (~p) done.~n", [?MODULE, self()]),
-  State#state.reciever ! {parser_is_done, self()},
+  State#state.receiver ! {parser_is_done, self()},
   {noreply, State};
 
 handle_cast({line, LineNumber, Line}, State) ->
   List = parse_line(Line, State#state.splitter, State#state.delimiter),
-  State#state.reciever ! {LineNumber, List},
+  State#state.receiver ! {LineNumber, List},
   {noreply, State};
 
 handle_cast(_Request, State) ->

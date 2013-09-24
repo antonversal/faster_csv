@@ -14,10 +14,10 @@
 %% ====================================================================
 %% API
 %% ====================================================================
-start_link(Id, ParserWrkCount, Reciever, Splitter, Delimiter) ->
+start_link(Id, ParserWrkCount, Receiver, Splitter, Delimiter) ->
   Name = name(Id),
   io:format("Count: ~w ~n", [ParserWrkCount]),
-  Res = supervisor:start_link({local, Name}, ?MODULE, [Reciever, Splitter, Delimiter]),
+  Res = supervisor:start_link({local, Name}, ?MODULE, [Receiver, Splitter, Delimiter]),
   create_parsers(Id, ParserWrkCount),
   Res.
 
@@ -33,10 +33,10 @@ children_pids(Id) ->
 %% ===================================================================
 %% supervisor callbacks
 %% ===================================================================
-init([Reciever, Splitter, Delimiter]) ->
+init([Receiver, Splitter, Delimiter]) ->
   process_flag(trap_exit, true),
   io:format("~p (~p) starting...~n", [?MODULE, self()]),
-  Child = ?CHILD(faster_csv_parser, worker, [Reciever, Splitter, Delimiter]),
+  Child = ?CHILD(faster_csv_parser, worker, [Receiver, Splitter, Delimiter]),
   {ok, {{simple_one_for_one, 5, 30},[Child]}}.
 
 %% ====================================================================

@@ -15,19 +15,19 @@
 %% API functions
 %% ===================================================================
 
-start_link(Id, ParserWrkCount, Reciever, Splitter, Delimiter) ->
+start_link(Id, ParserWrkCount, Receiver, Splitter, Delimiter) ->
   Name = name(Id),
-  supervisor:start_link({local, Name}, ?MODULE, [Id, ParserWrkCount, Reciever, Splitter, Delimiter]).
+  supervisor:start_link({local, Name}, ?MODULE, [Id, ParserWrkCount, Receiver, Splitter, Delimiter]).
 
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
 
-init([Id, ParserWrkCount, Reciever, Splitter, Delimiter]) ->
+init([Id, ParserWrkCount, Receiver, Splitter, Delimiter]) ->
   %process_flag(trap_exit, true),
   io:format("~p (~p) starting...~n", [?MODULE, self()]),
   Reader = ?CHILD(faster_csv_reader, worker, [Id]),
-  ParserSup = ?CHILD(faster_csv_parser_sup, worker, [Id, ParserWrkCount, Reciever, Splitter, Delimiter]),
+  ParserSup = ?CHILD(faster_csv_parser_sup, worker, [Id, ParserWrkCount, Receiver, Splitter, Delimiter]),
   Router = ?CHILD(faster_csv_router, worker, [Id]),
   {ok, { {one_for_all, 5, 10}, [Reader, ParserSup, Router]}}.
 
